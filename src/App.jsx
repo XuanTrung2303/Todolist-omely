@@ -2,35 +2,27 @@ import React, { useState, useEffect } from 'react';
 
 export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem('omely_current_user');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [screen, setScreen] = useState('auth');
   const [authMode, setAuthMode] = useState('login');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Danh sách tài khoản hệ thống (Bổ sung thêm trường position)
-  const [users, setUsers] = useState([
-    {
-      id: 1,
-      email: 'omelytour@gmail.com',
-      password: 'AdminOmely123@!',
-      name: 'Quản trị viên Omely',
-      position: 'Điều hành tổng',
-      role: 'admin',
-      avatar: 'https://ui-avatars.com/api/?name=Admin+Omely&background=0D8ABC&color=fff'
-    },
-    {
-      id: 2,
-      email: 'nhanvien@gmail.com',
-      password: '123456',
-      name: 'Nguyễn Văn Nhân Viên',
-      position: 'Nhân viên Sale Tour',
-      role: 'employee',
-      avatar: 'https://ui-avatars.com/api/?name=NV'
-    },
-  ]);
+  const [users, setUsers] = useState(() => {
+    const savedUsers = localStorage.getItem('omely_users');
+    return savedUsers ? JSON.parse(savedUsers) : [
+      { id: 1, email: 'omelytour@gmail.com', password: '1', name: 'Quản trị viên Omely', role: 'admin', avatar: 'https://ui-avatars.com/api/?name=Admin+Omely' }
+    ];
+  });
 
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState(() => {
+    const saved = localStorage.getItem('omely_tasks');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [dailySubmissions, setDailySubmissions] = useState({});
 
   // Form đăng nhập / đăng ký (Thêm state position)
@@ -60,6 +52,7 @@ export default function App() {
     };
 
     setUsers([...users, newUser]);
+    localStorage.setItem('omely_users', JSON.stringify([...users, newUser]));
     alert('Đăng ký tài khoản thành công! Hãy đăng nhập.');
     setAuthMode('login');
     // Reset form
@@ -76,6 +69,7 @@ export default function App() {
     } else {
       alert('Sai thông tin đăng nhập! Vui lòng kiểm tra lại Email hoặc Mật khẩu.');
     }
+    localStorage.setItem('omely_current_user', JSON.stringify(user));
   };
 
   const handleLogout = () => {
@@ -93,7 +87,9 @@ export default function App() {
     const updatedUser = { ...currentUser, ...updatedData };
     setCurrentUser(updatedUser);
     setUsers(users.map(u => u.id === currentUser.id ? updatedUser : u));
-    setTasks(tasks.map(t => t.userEmail === currentUser.email ? { ...t, userName: updatedData.name } : t));
+    setTasks(useEffect(() => {
+      localStorage.setItem('omely_tasks', JSON.stringify(tasks));
+    }, [tasks]));
     alert('Cập nhật tài khoản cá nhân thành công!');
     setIsProfileOpen(false);
   };
@@ -234,7 +230,13 @@ function ProfileModal({ currentUser, onSave, onClose }) {
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
-    if (file) setAvatar(URL.createObjectURL(file));
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatar(reader.result); // Lưu chuỗi Base64
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = (e) => {
