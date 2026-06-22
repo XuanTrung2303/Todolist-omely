@@ -308,11 +308,9 @@ function ProfileModal({ currentUser, onSave, onClose }) {
   );
 }
 
-// ==================== KHỐI TRANG TODOLIST CỦA NHÂN VIÊN (ĐÃ THÊM SỬA/XÓA TASK) ====================
+// ==================== KHỐI TRANG TODOLIST CỦA NHÂN VIÊN ====================
 function EmployeeSection({ tasks, setTasks, currentUser, selectedDate, isDayFinalized, onFinalize }) {
   const [input, setInput] = useState('');
-  
-  // Trạng thái phục vụ chỉnh sửa nội dung công việc tại chỗ
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editingTitleText, setEditingTitleText] = useState('');
 
@@ -339,7 +337,6 @@ function EmployeeSection({ tasks, setTasks, currentUser, selectedDate, isDayFina
     const file = e.target.files[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) return alert("Vui lòng tải lên ảnh báo cáo có dung lượng nhỏ hơn 2MB.");
-      
       const reader = new FileReader();
       reader.onloadend = () => {
         setTasks(prev => prev.map(t => t.id === id ? { ...t, img: reader.result, status: 'done' } : t));
@@ -348,20 +345,17 @@ function EmployeeSection({ tasks, setTasks, currentUser, selectedDate, isDayFina
     }
   };
 
-  // Kích hoạt chế độ sửa tiêu đề đầu việc
   const startEditingTask = (task) => {
     setEditingTaskId(task.id);
     setEditingTitleText(task.title);
   };
 
-  // Lưu nội dung tiêu đề mới sau khi sửa
   const saveEditingTask = (id) => {
     if (!editingTitleText.trim()) return alert("Vui lòng không bỏ trống tên công việc!");
     setTasks(prev => prev.map(t => t.id === id ? { ...t, title: editingTitleText } : t));
     setEditingTaskId(null);
   };
 
-  // Xóa bỏ một đầu việc ra khỏi danh sách
   const handleDeleteTask = (id, title) => {
     const isConfirmed = window.confirm(`Bạn có chắc chắn muốn xóa đầu việc: "${title}" không?`);
     if (isConfirmed) {
@@ -398,15 +392,9 @@ function EmployeeSection({ tasks, setTasks, currentUser, selectedDate, isDayFina
           tasks.map(t => (
             <div key={t.id} className="flex flex-col sm:flex-row justify-between p-3 bg-gray-50 dark:bg-gray-700/30 rounded border dark:border-gray-700 gap-3 items-start sm:items-center">
               
-              {/* PHẦN HIỂN THỊ HOẶC SỬA TÊN CÔNG VIỆC */}
               {editingTaskId === t.id ? (
                 <div className="flex items-center space-x-2 w-full sm:flex-1 mr-2">
-                  <input 
-                    type="text" 
-                    value={editingTitleText} 
-                    onChange={(e) => setEditingTitleText(e.target.value)} 
-                    className="flex-1 p-1.5 text-xs sm:text-sm border rounded dark:bg-gray-700 bg-white outline-none ring-1 ring-blue-500" 
-                  />
+                  <input type="text" value={editingTitleText} onChange={(e) => setEditingTitleText(e.target.value)} className="flex-1 p-1.5 text-xs sm:text-sm border rounded dark:bg-gray-700 bg-white outline-none ring-1 ring-blue-500" />
                   <button onClick={() => saveEditingTask(t.id)} className="bg-blue-500 text-white text-[10px] px-2 py-1.5 rounded font-bold">Lưu</button>
                   <button onClick={() => setEditingTaskId(null)} className="bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 text-[10px] px-2 py-1.5 rounded">Hủy</button>
                 </div>
@@ -415,8 +403,6 @@ function EmployeeSection({ tasks, setTasks, currentUser, selectedDate, isDayFina
                   <span className={`text-xs sm:text-sm block break-words ${t.status === 'done' ? 'line-through text-gray-400' : 'font-medium'}`}>
                     {t.title}
                   </span>
-                  
-                  {/* THANH ĐIỀU KHIỂN: SỬA / XÓA (Chỉ xuất hiện khi chưa khóa ngày) */}
                   {!isDayFinalized && (
                     <div className="flex items-center space-x-2 mt-1 text-[11px]">
                       <button onClick={() => startEditingTask(t)} className="text-blue-500 hover:underline font-medium">Chỉnh sửa</button>
@@ -427,7 +413,6 @@ function EmployeeSection({ tasks, setTasks, currentUser, selectedDate, isDayFina
                 </div>
               )}
 
-              {/* PHẦN TRẠNG THÁI VÀ ẢNH ĐÍNH KÈM */}
               <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0">
                 {t.status === 'done' && (
                   <div className="flex items-center">
@@ -471,9 +456,12 @@ function EmployeeSection({ tasks, setTasks, currentUser, selectedDate, isDayFina
   );
 }
 
-// ==================== KHỐI TIẾN ĐỘ THEO DÕI CỦA ADMIN ====================
+// ==================== KHỐI TIẾN ĐỘ THEO DÕI CỦA ADMIN (ĐÃ THÊM XEM ẢNH BÁO CÁO) ====================
 function AdminTaskView({ tasks, selectedDate, users }) {
+  // Trạng thái lưu trữ ảnh đang phóng to xem chi tiết
+  const [previewImg, setPreviewImg] = useState(null);
   const tasksForSelectedDate = tasks.filter(t => t.date === selectedDate);
+
   return (
     <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-sm">
       <h3 className="font-bold text-sm sm:text-base mb-3 border-b pb-2 text-blue-600">Tiến độ nhân sự ngày: {selectedDate}</h3>
@@ -481,25 +469,64 @@ function AdminTaskView({ tasks, selectedDate, users }) {
         {users.filter(u => u.role !== 'admin').map(user => {
           const userTasks = tasksForSelectedDate.filter(t => t.userEmail === user.email);
           return (
-            <div key={user.id} className="p-3 border rounded-lg">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-bold text-sm">{user.name}</span>
-                <span className={`text-[10px] px-2 py-1 rounded ${userTasks.length > 0 && userTasks.every(t => t.status === 'done') ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+            <div key={user.id} className="p-3 border rounded-lg bg-gray-50/50 dark:bg-gray-700/10">
+              <div className="flex justify-between items-center mb-2 border-b pb-1 dark:border-gray-700">
+                <span className="font-bold text-sm text-gray-800 dark:text-gray-200">{user.name}</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${userTasks.length > 0 && userTasks.every(t => t.status === 'done') ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
                   {userTasks.length === 0 ? 'Chưa có việc' : userTasks.every(t => t.status === 'done') ? 'Hoàn thành' : 'Đang làm'}
                 </span>
               </div>
-              {userTasks.map(t => (
-                <div key={t.id} className="flex justify-between text-xs py-1 border-b">
-                  <span>{t.title}</span>
-                  <span className={`font-bold ${t.status === 'done' ? 'text-green-600' : 'text-gray-400'}`}>
-                    {t.status === 'done' ? '✓ Đã xong' : 'Chưa xong'}
-                  </span>
-                </div>
-              ))}
+              
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                {userTasks.map(t => (
+                  <div key={t.id} className="flex justify-between items-center text-xs py-2 gap-4">
+                    <span className="text-gray-600 dark:text-gray-300 break-words flex-1">{t.title}</span>
+                    
+                    {/* KHU VỰC THAY ĐỔI: HIỂN THỊ ICON ẢNH HOÀN THÀNH CHO ADMIN */}
+                    <div className="flex items-center space-x-2 flex-shrink-0">
+                      {t.status === 'done' && t.img && (
+                        <div className="relative">
+                          <img 
+                            src={t.img} 
+                            alt="Báo cáo hoàn thành" 
+                            onClick={() => setPreviewImg(t.img)}
+                            className="w-7 h-7 rounded object-cover border border-blue-400 cursor-zoom-in hover:scale-110 transition duration-150"
+                            title="Bấm vào để phóng to xem ảnh"
+                          />
+                        </div>
+                      )}
+                      
+                      <span className={`font-bold text-[11px] ${t.status === 'done' ? 'text-green-600' : t.status === 'doing' ? 'text-amber-500' : 'text-gray-400'}`}>
+                        {t.status === 'done' ? '✓ Đã xong' : t.status === 'doing' ? '⏳ Đang làm' : '⭕ Chưa làm'}
+                      </span>
+                    </div>
+
+                  </div>
+                ))}
+              </div>
             </div>
           );
         })}
       </div>
+
+      {/* LIGHTBOX MODAL: HIỂN THỊ PHÓNG TO ẢNH CHO ADMIN KHI CLICK VÀO THUMBNAIL */}
+      {previewImg && (
+        <div 
+          className="fixed inset-0 bg-black/80 flex flex-col items-center justify-center p-4 z-50 backdrop-blur-sm cursor-zoom-out"
+          onClick={() => setPreviewImg(null)}
+        >
+          <div className="relative max-w-3xl max-h-[85vh] bg-white dark:bg-gray-800 p-2 rounded-lg shadow-2xl">
+            <button 
+              onClick={() => setPreviewImg(null)}
+              className="absolute -top-10 right-0 text-white bg-black/50 px-3 py-1 rounded-full text-xs hover:bg-black/80 font-bold transition"
+            >
+              Đóng (Click ra ngoài)
+            </button>
+            <img src={previewImg} alt="Chi tiết minh chứng hoàn thành" className="max-w-full max-h-[75vh] object-contain rounded" />
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -543,12 +570,7 @@ function AdminUserManagement({ users, currentUser, onChangeRole, onDeleteUser })
                         <option value="employee">Employee</option>
                         <option value="admin">Admin</option>
                       </select>
-                      <button 
-                        onClick={() => onDeleteUser(u.id)}
-                        className="px-2 py-1 text-[11px] font-medium text-red-600 hover:text-white border border-red-300 hover:bg-red-600 rounded transition duration-200"
-                      >
-                        Xóa
-                      </button>
+                      <button onClick={() => onDeleteUser(u.id)} className="px-2 py-1 text-[11px] font-medium text-red-600 hover:text-white border border-red-300 hover:bg-red-600 rounded transition duration-200">Xóa</button>
                     </div>
                   )}
                 </td>
