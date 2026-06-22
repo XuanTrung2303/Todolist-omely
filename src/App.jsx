@@ -13,8 +13,8 @@ const getSafeJSON = (key, fallback) => {
 
 export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
-
-  // 1. Khởi tạo State từ LocalStorage
+  
+  // Khởi tạo State từ LocalStorage
   const [users, setUsers] = useState(() => getSafeJSON('omely_users', [
     { id: 1, email: 'omelytour@gmail.com', password: '1', name: 'Quản trị viên Omely', role: 'admin', position: 'Giám đốc', avatar: 'https://ui-avatars.com/api/?name=Admin+Omely' }
   ]));
@@ -34,7 +34,7 @@ export default function App() {
   const [position, setPosition] = useState('');
 
   // ----------------------------------------------------------------
-  // 2. TỰ ĐỘNG ĐỒNG BỘ DỮ LIỆU LÊN LOCALSTORAGE MỖI KHI STATE THAY ĐỔI
+  // TỰ ĐỘNG ĐỒNG BỘ DỮ LIỆU LÊN LOCALSTORAGE MỖI KHI STATE THAY ĐỔI
   // ----------------------------------------------------------------
   useEffect(() => {
     if (isDarkMode) document.documentElement.classList.add('dark');
@@ -42,7 +42,7 @@ export default function App() {
   }, [isDarkMode]);
 
   useEffect(() => {
-    try { localStorage.setItem('omely_users', JSON.stringify(users)); } catch (e) { console.error(e); }
+    try { localStorage.setItem('omely_users', JSON.stringify(users)); } catch(e) { console.error(e); }
   }, [users]);
 
   useEffect(() => {
@@ -52,15 +52,15 @@ export default function App() {
       } else {
         localStorage.removeItem('omely_current_user');
       }
-    } catch (e) { console.error(e); }
+    } catch(e) { console.error(e); }
   }, [currentUser]);
 
   useEffect(() => {
-    try { localStorage.setItem('omely_tasks', JSON.stringify(tasks)); } catch (e) { console.error(e); }
+    try { localStorage.setItem('omely_tasks', JSON.stringify(tasks)); } catch(e) { console.error(e); }
   }, [tasks]);
 
   useEffect(() => {
-    try { localStorage.setItem('omely_daily_submissions', JSON.stringify(dailySubmissions)); } catch (e) { console.error(e); }
+    try { localStorage.setItem('omely_daily_submissions', JSON.stringify(dailySubmissions)); } catch(e) { console.error(e); }
   }, [dailySubmissions]);
   // ----------------------------------------------------------------
 
@@ -112,29 +112,24 @@ export default function App() {
     const userToDelete = users.find(u => u.id === userId);
     if (!userToDelete) return;
 
-    // Hiển thị hộp thoại xác nhận trước khi xóa
     const confirmDelete = window.confirm(`Bạn có chắc chắn muốn xóa nhân viên "${userToDelete.name}" khỏi hệ thống? \nHành động này cũng sẽ xóa toàn bộ danh sách công việc của nhân sự này.`);
-
+    
     if (confirmDelete) {
-      // 1. Xóa nhân viên khỏi danh sách users
       setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
-      // 2. Xóa toàn bộ task liên quan đến email của nhân viên đó cho sạch dữ liệu
       setTasks(prevTasks => prevTasks.filter(t => t.userEmail !== userToDelete.email));
-
       alert(`Đã xóa thành công nhân viên ${userToDelete.name}!`);
     }
   };
 
   const handleSaveProfile = (updatedData) => {
     try {
-      // Logic đã được tinh gọn, LocalStorage sẽ tự động được useEffect cập nhật
       const updatedUser = { ...currentUser, ...updatedData };
       setUsers(prevUsers => prevUsers.map(u => u.id === currentUser.id ? updatedUser : u));
       setCurrentUser(updatedUser);
-      setTasks(prevTasks => prevTasks.map(t =>
+      setTasks(prevTasks => prevTasks.map(t => 
         t.userEmail === currentUser.email ? { ...t, userName: updatedData.name } : t
       ));
-
+      
       alert('Cập nhật thông tin thành công!');
       setIsProfileOpen(false);
     } catch (error) {
@@ -198,12 +193,12 @@ export default function App() {
               <span className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400">Omelytour Todolist</span>
               <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-500 uppercase font-mono font-bold">{currentUser.role}</span>
             </div>
-
+            
             <div className="flex items-center space-x-4 border-t sm:border-t-0 pt-2 sm:pt-0 w-full sm:w-auto justify-end">
               <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full text-xs">
                 {isDarkMode ? '🌞' : '🌙'}
               </button>
-
+              
               <div className="flex items-center space-x-3">
                 <img src={currentUser.avatar} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-blue-500/30" />
                 <div className="text-left">
@@ -263,7 +258,6 @@ function ProfileModal({ currentUser, onSave, onClose }) {
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // KIỂM TRA DUNG LƯỢNG (Tránh lỗi làm sập LocalStorage)
       if (file.size > 2 * 1024 * 1024) {
         return alert("Vui lòng chọn ảnh có kích thước dưới 2MB!");
       }
@@ -314,9 +308,13 @@ function ProfileModal({ currentUser, onSave, onClose }) {
   );
 }
 
-// ==================== KHỐI TRANG TODOLIST CỦA NHÂN VIÊN ====================
+// ==================== KHỐI TRANG TODOLIST CỦA NHÂN VIÊN (ĐÃ THÊM SỬA/XÓA TASK) ====================
 function EmployeeSection({ tasks, setTasks, currentUser, selectedDate, isDayFinalized, onFinalize }) {
   const [input, setInput] = useState('');
+  
+  // Trạng thái phục vụ chỉnh sửa nội dung công việc tại chỗ
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editingTitleText, setEditingTitleText] = useState('');
 
   const addTask = (e) => {
     e.preventDefault();
@@ -341,13 +339,34 @@ function EmployeeSection({ tasks, setTasks, currentUser, selectedDate, isDayFina
     const file = e.target.files[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) return alert("Vui lòng tải lên ảnh báo cáo có dung lượng nhỏ hơn 2MB.");
-
-      // Chuyển sang Base64 để lưu vào localStorage không bị mất sau khi F5
+      
       const reader = new FileReader();
       reader.onloadend = () => {
         setTasks(prev => prev.map(t => t.id === id ? { ...t, img: reader.result, status: 'done' } : t));
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // Kích hoạt chế độ sửa tiêu đề đầu việc
+  const startEditingTask = (task) => {
+    setEditingTaskId(task.id);
+    setEditingTitleText(task.title);
+  };
+
+  // Lưu nội dung tiêu đề mới sau khi sửa
+  const saveEditingTask = (id) => {
+    if (!editingTitleText.trim()) return alert("Vui lòng không bỏ trống tên công việc!");
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, title: editingTitleText } : t));
+    setEditingTaskId(null);
+  };
+
+  // Xóa bỏ một đầu việc ra khỏi danh sách
+  const handleDeleteTask = (id, title) => {
+    const isConfirmed = window.confirm(`Bạn có chắc chắn muốn xóa đầu việc: "${title}" không?`);
+    if (isConfirmed) {
+      setTasks(prev => prev.filter(t => t.id !== id));
+      if (editingTaskId === id) setEditingTaskId(null);
     }
   };
 
@@ -377,9 +396,39 @@ function EmployeeSection({ tasks, setTasks, currentUser, selectedDate, isDayFina
           <p className="text-xs text-gray-400 text-center py-6">Hôm nay chưa thiết lập mục tiêu.</p>
         ) : (
           tasks.map(t => (
-            <div key={t.id} className="flex flex-col sm:flex-row justify-between p-3 bg-gray-50 dark:bg-gray-700/30 rounded border dark:border-gray-700 gap-3">
-              <span className={`text-xs sm:text-sm flex-1 ${t.status === 'done' ? 'line-through text-gray-400' : 'font-medium'}`}>{t.title}</span>
-              <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
+            <div key={t.id} className="flex flex-col sm:flex-row justify-between p-3 bg-gray-50 dark:bg-gray-700/30 rounded border dark:border-gray-700 gap-3 items-start sm:items-center">
+              
+              {/* PHẦN HIỂN THỊ HOẶC SỬA TÊN CÔNG VIỆC */}
+              {editingTaskId === t.id ? (
+                <div className="flex items-center space-x-2 w-full sm:flex-1 mr-2">
+                  <input 
+                    type="text" 
+                    value={editingTitleText} 
+                    onChange={(e) => setEditingTitleText(e.target.value)} 
+                    className="flex-1 p-1.5 text-xs sm:text-sm border rounded dark:bg-gray-700 bg-white outline-none ring-1 ring-blue-500" 
+                  />
+                  <button onClick={() => saveEditingTask(t.id)} className="bg-blue-500 text-white text-[10px] px-2 py-1.5 rounded font-bold">Lưu</button>
+                  <button onClick={() => setEditingTaskId(null)} className="bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 text-[10px] px-2 py-1.5 rounded">Hủy</button>
+                </div>
+              ) : (
+                <div className="flex-1 min-w-0">
+                  <span className={`text-xs sm:text-sm block break-words ${t.status === 'done' ? 'line-through text-gray-400' : 'font-medium'}`}>
+                    {t.title}
+                  </span>
+                  
+                  {/* THANH ĐIỀU KHIỂN: SỬA / XÓA (Chỉ xuất hiện khi chưa khóa ngày) */}
+                  {!isDayFinalized && (
+                    <div className="flex items-center space-x-2 mt-1 text-[11px]">
+                      <button onClick={() => startEditingTask(t)} className="text-blue-500 hover:underline font-medium">Chỉnh sửa</button>
+                      <span className="text-gray-300">|</span>
+                      <button onClick={() => handleDeleteTask(t.id, t.title)} className="text-red-500 hover:underline font-medium">Xóa bỏ</button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* PHẦN TRẠNG THÁI VÀ ẢNH ĐÍNH KÈM */}
+              <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0">
                 {t.status === 'done' && (
                   <div className="flex items-center">
                     {t.img ? (
@@ -398,12 +447,13 @@ function EmployeeSection({ tasks, setTasks, currentUser, selectedDate, isDayFina
                     )}
                   </div>
                 )}
-                <select value={t.status} disabled={isDayFinalized} onChange={(e) => updateStatus(t.id, e.target.value)} className="p-1 text-[11px] rounded border outline-none w-24">
+                <select value={t.status} disabled={isDayFinalized} onChange={(e) => updateStatus(t.id, e.target.value)} className="p-1 text-[11px] rounded border outline-none w-24 dark:bg-gray-800 bg-white">
                   <option value="todo">Chưa làm</option>
                   <option value="doing">Đang làm</option>
                   <option value="done">Hoàn thành</option>
                 </select>
               </div>
+
             </div>
           ))
         )}
@@ -455,7 +505,7 @@ function AdminTaskView({ tasks, selectedDate, users }) {
 }
 
 // ==================== KHỐI QUẢN LÝ THÀNH VIÊN CỦA ADMIN ====================
-function AdminUserManagement({ users, currentUser, onChangeRole }) {
+function AdminUserManagement({ users, currentUser, onChangeRole, onDeleteUser }) {
   return (
     <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-sm">
       <h3 className="font-bold text-sm sm:text-base mb-3 border-b pb-2 text-purple-600">Phân quyền tài khoản hệ thống</h3>
@@ -488,29 +538,17 @@ function AdminUserManagement({ users, currentUser, onChangeRole }) {
                   {u.id === currentUser.id ? (
                     <span className="text-[11px] text-gray-400 italic whitespace-nowrap">Chính bạn</span>
                   ) : (
-                    <select value={u.role} onChange={(e) => onChangeRole(u.id, e.target.value)} className="p-1 text-[11px] border rounded outline-none">
-                      <option value="employee">Employee</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  )}
-                </td>
-                <td className="p-2 text-right">
-                  {u.id === currentUser.id ? (
-                    <span className="text-[11px] text-gray-400 italic whitespace-nowrap">Chính bạn</span>
-                  ) : (
                     <div className="flex items-center justify-end space-x-2">
                       <select value={u.role} onChange={(e) => onChangeRole(u.id, e.target.value)} className="p-1 text-[11px] border rounded outline-none dark:bg-gray-700 bg-transparent">
                         <option value="employee">Employee</option>
                         <option value="admin">Admin</option>
                       </select>
-
-                      {/* Nút xóa được thêm ở đây */}
-                      <button
+                      <button 
                         onClick={() => onDeleteUser(u.id)}
                         className="px-2 py-1 text-[11px] font-medium text-red-600 hover:text-white border border-red-300 hover:bg-red-600 rounded transition duration-200"
                       >
                         Xóa
-      </button>
+                      </button>
                     </div>
                   )}
                 </td>
