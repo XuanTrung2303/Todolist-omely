@@ -13,7 +13,7 @@ const getSafeJSON = (key, fallback) => {
 
 export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
-  
+
   // 1. Khởi tạo State từ LocalStorage
   const [users, setUsers] = useState(() => getSafeJSON('omely_users', [
     { id: 1, email: 'omelytour@gmail.com', password: '1', name: 'Quản trị viên Omely', role: 'admin', position: 'Giám đốc', avatar: 'https://ui-avatars.com/api/?name=Admin+Omely' }
@@ -42,7 +42,7 @@ export default function App() {
   }, [isDarkMode]);
 
   useEffect(() => {
-    try { localStorage.setItem('omely_users', JSON.stringify(users)); } catch(e) { console.error(e); }
+    try { localStorage.setItem('omely_users', JSON.stringify(users)); } catch (e) { console.error(e); }
   }, [users]);
 
   useEffect(() => {
@@ -52,15 +52,15 @@ export default function App() {
       } else {
         localStorage.removeItem('omely_current_user');
       }
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
   }, [currentUser]);
 
   useEffect(() => {
-    try { localStorage.setItem('omely_tasks', JSON.stringify(tasks)); } catch(e) { console.error(e); }
+    try { localStorage.setItem('omely_tasks', JSON.stringify(tasks)); } catch (e) { console.error(e); }
   }, [tasks]);
 
   useEffect(() => {
-    try { localStorage.setItem('omely_daily_submissions', JSON.stringify(dailySubmissions)); } catch(e) { console.error(e); }
+    try { localStorage.setItem('omely_daily_submissions', JSON.stringify(dailySubmissions)); } catch (e) { console.error(e); }
   }, [dailySubmissions]);
   // ----------------------------------------------------------------
 
@@ -108,16 +108,33 @@ export default function App() {
     setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
   };
 
+  const handleDeleteUser = (userId) => {
+    const userToDelete = users.find(u => u.id === userId);
+    if (!userToDelete) return;
+
+    // Hiển thị hộp thoại xác nhận trước khi xóa
+    const confirmDelete = window.confirm(`Bạn có chắc chắn muốn xóa nhân viên "${userToDelete.name}" khỏi hệ thống? \nHành động này cũng sẽ xóa toàn bộ danh sách công việc của nhân sự này.`);
+
+    if (confirmDelete) {
+      // 1. Xóa nhân viên khỏi danh sách users
+      setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
+      // 2. Xóa toàn bộ task liên quan đến email của nhân viên đó cho sạch dữ liệu
+      setTasks(prevTasks => prevTasks.filter(t => t.userEmail !== userToDelete.email));
+
+      alert(`Đã xóa thành công nhân viên ${userToDelete.name}!`);
+    }
+  };
+
   const handleSaveProfile = (updatedData) => {
     try {
       // Logic đã được tinh gọn, LocalStorage sẽ tự động được useEffect cập nhật
       const updatedUser = { ...currentUser, ...updatedData };
       setUsers(prevUsers => prevUsers.map(u => u.id === currentUser.id ? updatedUser : u));
       setCurrentUser(updatedUser);
-      setTasks(prevTasks => prevTasks.map(t => 
+      setTasks(prevTasks => prevTasks.map(t =>
         t.userEmail === currentUser.email ? { ...t, userName: updatedData.name } : t
       ));
-      
+
       alert('Cập nhật thông tin thành công!');
       setIsProfileOpen(false);
     } catch (error) {
@@ -181,12 +198,12 @@ export default function App() {
               <span className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400">Omelytour Todolist</span>
               <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-500 uppercase font-mono font-bold">{currentUser.role}</span>
             </div>
-            
+
             <div className="flex items-center space-x-4 border-t sm:border-t-0 pt-2 sm:pt-0 w-full sm:w-auto justify-end">
               <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full text-xs">
                 {isDarkMode ? '🌞' : '🌙'}
               </button>
-              
+
               <div className="flex items-center space-x-3">
                 <img src={currentUser.avatar} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-blue-500/30" />
                 <div className="text-left">
@@ -222,7 +239,7 @@ export default function App() {
             {currentUser.role === 'admin' && (
               <div className="space-y-4 sm:space-y-6">
                 <AdminTaskView tasks={tasks.filter(t => t.date === selectedDate)} selectedDate={selectedDate} users={users} />
-                <AdminUserManagement users={users} currentUser={currentUser} onChangeRole={handleChangeRole} />
+                <AdminUserManagement users={users} currentUser={currentUser} onChangeRole={handleChangeRole} onDeleteUser={handleDeleteUser} />
               </div>
             )}
           </main>
@@ -324,7 +341,7 @@ function EmployeeSection({ tasks, setTasks, currentUser, selectedDate, isDayFina
     const file = e.target.files[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) return alert("Vui lòng tải lên ảnh báo cáo có dung lượng nhỏ hơn 2MB.");
-      
+
       // Chuyển sang Base64 để lưu vào localStorage không bị mất sau khi F5
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -475,6 +492,26 @@ function AdminUserManagement({ users, currentUser, onChangeRole }) {
                       <option value="employee">Employee</option>
                       <option value="admin">Admin</option>
                     </select>
+                  )}
+                </td>
+                <td className="p-2 text-right">
+                  {u.id === currentUser.id ? (
+                    <span className="text-[11px] text-gray-400 italic whitespace-nowrap">Chính bạn</span>
+                  ) : (
+                    <div className="flex items-center justify-end space-x-2">
+                      <select value={u.role} onChange={(e) => onChangeRole(u.id, e.target.value)} className="p-1 text-[11px] border rounded outline-none dark:bg-gray-700 bg-transparent">
+                        <option value="employee">Employee</option>
+                        <option value="admin">Admin</option>
+                      </select>
+
+                      {/* Nút xóa được thêm ở đây */}
+                      <button
+                        onClick={() => onDeleteUser(u.id)}
+                        className="px-2 py-1 text-[11px] font-medium text-red-600 hover:text-white border border-red-300 hover:bg-red-600 rounded transition duration-200"
+                      >
+                        Xóa
+      </button>
+                    </div>
                   )}
                 </td>
               </tr>
