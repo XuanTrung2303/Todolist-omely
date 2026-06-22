@@ -110,7 +110,7 @@ export default function App() {
             </h2>
             <p className="text-[11px] text-center text-gray-400 mb-6 font-medium tracking-wider">HỆ THỐNG QUẢN LÝ CÔNG VIỆC</p>
             <div className="flex justify-center my-4">
-              <img src="/logo.svg" alt="Logo" className="h-16 w-auto" />
+              <img src="/Logo.svg" alt="Logo" className="h-16 w-auto" />
             </div>
             <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-4">
               {authMode === 'register' && (
