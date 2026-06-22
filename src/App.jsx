@@ -84,15 +84,28 @@ export default function App() {
   };
 
   const handleSaveProfile = (updatedData) => {
+    // 1. Tạo đối tượng mới
     const updatedUser = { ...currentUser, ...updatedData };
+    
+    // 2. Cập nhật state users trong mảng
+    const newUsers = users.map(u => u.id === currentUser.id ? updatedUser : u);
+    setUsers(newUsers);
+    
+    // 3. Cập nhật user hiện tại
     setCurrentUser(updatedUser);
-    setUsers(users.map(u => u.id === currentUser.id ? updatedUser : u));
-    setTasks(useEffect(() => {
-      localStorage.setItem('omely_tasks', JSON.stringify(tasks));
-    }, [tasks]));
-    alert('Cập nhật tài khoản cá nhân thành công!');
+    
+    // 4. LƯU VÀO LOCALSTORAGE NGAY LẬP TỨC ĐỂ DỮ LIỆU KHÔNG BỊ MẤT KHI F5
+    localStorage.setItem('omely_users', JSON.stringify(newUsers));
+    localStorage.setItem('omely_current_user', JSON.stringify(updatedUser));
+
+    // 5. Nếu cần cập nhật tasks, hãy cẩn thận
+    setTasks(prevTasks => prevTasks.map(t => 
+        t.userEmail === currentUser.email ? { ...t, userName: updatedData.name } : t
+    ));
+
+    alert('Cập nhật thành công!');
     setIsProfileOpen(false);
-  };
+};
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300 font-sans">
