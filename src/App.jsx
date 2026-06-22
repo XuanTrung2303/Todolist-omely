@@ -16,13 +16,13 @@ import {
 // CẤU HÌNH FIREBASE (HÃY THAY BẰNG CODES CỦA BẠN Ở BƯỚC 1)
 // =================================================================
 const firebaseConfig = {
-apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-     projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-     storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-     appId: import.meta.env.VITE_FIREBASE_APP_ID,
-     measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Khởi tạo ứng dụng Firebase và kết nối cơ sở dữ liệu Firestore
@@ -32,7 +32,7 @@ const db = getFirestore(app);
 export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // Các State lưu trữ dữ liệu kéo từ Cloud về
+  // Các State lưu trữ dữ liệu kéo về
   const [users, setUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [tasks, setTasks] = useState([]);
@@ -57,12 +57,12 @@ export default function App() {
 
   // 2. LẮNG NGHE DỮ LIỆU REALTIME TỪ FIREBASE CLOUD
   useEffect(() => {
-    // Tự động đồng bộ bảng danh sách thành viên (users) từ Cloud
+    // Tự động đồng bộ bảng danh sách thành viên (users)
     const unsubscribeUsers = onSnapshot(collection(db, "users"), (snapshot) => {
       const usersList = [];
       snapshot.forEach(doc => usersList.push({ id: doc.id, ...doc.data() }));
 
-      // Nếu chưa có tài khoản admin nào trên Cloud, tự động tạo 1 tài khoản mặc định ban đầu
+      // Nếu chưa có tài khoản admin nào, tự động tạo 1 tài khoản mặc định ban đầu
       if (usersList.length === 0) {
         const adminRef = doc(db, "users", "admin_omely");
         setDoc(adminRef, {
@@ -77,14 +77,14 @@ export default function App() {
       setUsers(usersList);
     });
 
-    // Tự động đồng bộ bảng danh sách công việc (tasks) từ Cloud
+    // Tự động đồng bộ bảng danh sách công việc (tasks)
     const unsubscribeTasks = onSnapshot(collection(db, "tasks"), (snapshot) => {
       const tasksList = [];
       snapshot.forEach(doc => tasksList.push({ id: doc.id, ...doc.data() }));
       setTasks(tasksList);
     });
 
-    // Tự động đồng bộ tình trạng chốt báo cáo ngày (dailySubmissions) từ Cloud
+    // Tự động đồng bộ tình trạng chốt báo cáo ngày (dailySubmissions)
     const unsubscribeSubmissions = onSnapshot(collection(db, "dailySubmissions"), (snapshot) => {
       const submissionsMap = {};
       snapshot.forEach(doc => {
@@ -100,11 +100,11 @@ export default function App() {
     };
   }, []);
 
-  // Xử lý Đăng ký tài khoản mới lên Cloud
+  // Xử lý Đăng ký tài khoản mới
   const handleRegister = async (e) => {
     e.preventDefault();
     if (!email || !password || !name || !position) return alert('Vui lòng điền đủ thông tin, bao gồm cả vị trí làm việc');
-    if (users.some(u => u.email === email)) return alert('Email này đã tồn tại trên hệ thống Cloud');
+    if (users.some(u => u.email === email)) return alert('Email này đã tồn tại');
 
     try {
       const cleanEmailId = email.replace(/\./g, '_'); // Chuyển dấu chấm thành gạch dưới để làm ID tài liệu an toàn
@@ -116,13 +116,13 @@ export default function App() {
         role: 'employee',
         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}`
       });
-      alert('Đăng ký tài khoản thành công lên đám mây! Hãy đăng nhập.');
+      alert('Đăng ký tài khoản thành công! Hãy đăng nhập.');
       setAuthMode('login');
       setName('');
       setPosition('');
     } catch (err) {
       console.error(err);
-      alert('Lỗi đăng ký dữ liệu cloud: ' + err.message);
+      alert('Lỗi đăng ký dữ liệu: ' + err.message);
     }
   };
 
@@ -145,7 +145,7 @@ export default function App() {
     setPassword('');
   };
 
-  // Thay đổi phân quyền thành viên lên Cloud
+  // Thay đổi phân quyền thành viên
   const handleChangeRole = async (userId, newRole) => {
     try {
       await updateDoc(doc(db, "users", userId), { role: newRole });
@@ -154,12 +154,12 @@ export default function App() {
     }
   };
 
-  // Xóa tài khoản nhân sự khỏi Cloud
+  // Xóa tài khoản nhân sự
   const handleDeleteUser = async (userId) => {
     const userToDelete = users.find(u => u.id === userId);
     if (!userToDelete) return;
 
-    const confirmDelete = window.confirm(`Bạn có chắc chắn muốn xóa nhân viên "${userToDelete.name}" khỏi hệ thống Đám Mây?`);
+    const confirmDelete = window.confirm(`Bạn có chắc chắn muốn xóa nhân viên "${userToDelete.name}" khỏi hệ thống?`);
     if (confirmDelete) {
       try {
         await deleteDoc(doc(db, "users", userId));
@@ -170,13 +170,22 @@ export default function App() {
     }
   };
 
-  // Cập nhật thông tin hồ sơ cá nhân lên Cloud
   const handleSaveProfile = async (updatedData) => {
     try {
+      // 1. Kiểm tra bảo vệ đề phòng currentUser chưa load xong
+      if (!currentUser || !currentUser.email) {
+        alert("Không tìm thấy thông tin email của người dùng!");
+        return;
+      }
+
       const cleanEmailId = currentUser.email.replace(/\./g, '_');
-      await updateDoc(doc(db, "users", cleanEmailId), updatedData);
+
+      // 2. Thay updateDoc bằng setDoc và thêm { merge: true } ở cuối
+      await setDoc(doc(db, "users", cleanEmailId), updatedData, { merge: true });
+
+      // 3. Cập nhật lại state dưới giao diện
       setCurrentUser({ ...currentUser, ...updatedData });
-      alert('Cập nhật thông tin cá nhân lên Cloud thành công!');
+      alert('Cập nhật thông tin cá nhân thành công!');
       setIsProfileOpen(false);
     } catch (error) {
       alert("Lỗi cập nhật hồ sơ: " + error.message);
@@ -189,7 +198,12 @@ export default function App() {
         <div className="flex min-h-screen items-center justify-center mb-6">
           <div className="w-full max-w-md bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700">
             <h2 className="text-2xl font-bold text-center text-blue-600 dark:text-blue-400 mb-1">Omelytour Todolist</h2>
-            <p className="text-[11px] text-center text-gray-400 mb-6 font-medium tracking-wider">HỆ THỐNG ĐỒNG BỘ ĐÁM MÂY (CLOUD)</p>
+            <p className="text-[11px] text-center text-gray-400 mb-6 font-medium tracking-wider">HỆ THỐNG TODOLIST</p>
+            <img
+              src="/logo.svg"
+              alt="Logo Omely"
+              className="w-24 h-24 object-contain mb-2"
+            />
             <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-4">
               {authMode === 'register' && (
                 <>
@@ -212,7 +226,7 @@ export default function App() {
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-2.5 border rounded-md dark:bg-gray-700 bg-transparent border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="Nhập mật khẩu" />
               </div>
               <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-md font-semibold transition text-sm">
-                {authMode === 'login' ? 'Đăng nhập hệ thống' : 'Tạo tài khoản đám mây'}
+                {authMode === 'login' ? 'Đăng nhập hệ thống' : 'Tạo tài khoản'}
               </button>
             </form>
             <div className="mt-4 text-center text-xs sm:text-sm">
@@ -230,8 +244,13 @@ export default function App() {
         <>
           <nav className="flex flex-col sm:flex-row gap-3 justify-between items-center p-4 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-100 dark:border-gray-700">
             <div className="flex items-center space-x-2">
+              <img
+                src="/logo.svg"
+                alt="Logo Omely"
+                className="w-10 h-10 object-contain"
+              />
               <span className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400">Omelytour Todolist</span>
-              <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-500 uppercase font-mono font-bold">MÁY CHỦ CLOUD</span>
+              <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-500 uppercase font-mono font-bold">MÁY CHỦ</span>
             </div>
             <div className="flex items-center space-x-4 border-t sm:border-t-0 pt-2 sm:pt-0 w-full sm:w-auto justify-end">
               <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full text-xs">{isDarkMode ? '🌞' : '🌙'}</button>
@@ -294,7 +313,7 @@ function ProfileModal({ currentUser, onSave, onClose }) {
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 1 * 1024 * 1024) return alert("Ảnh chân dung nên dưới 1MB để nén cloud mượt hơn!");
+      if (file.size > 1 * 1024 * 1024) return alert("Ảnh chân dung nên dưới 1MB để nén mượt hơn!");
       const reader = new FileReader();
       reader.onloadend = () => setAvatar(reader.result);
       reader.readAsDataURL(file);
@@ -363,7 +382,7 @@ function EmployeeSection({ tasks, currentUser, selectedDate, isDayFinalized, onF
       });
       setInput('');
     } catch (err) {
-      alert("Lỗi thêm công việc lên Cloud: " + err.message);
+      alert("Lỗi thêm công việc: " + err.message);
     }
   };
 
@@ -383,13 +402,13 @@ function EmployeeSection({ tasks, currentUser, selectedDate, isDayFinalized, onF
     if (file) {
       // Do Firestore giới hạn dữ liệu chuỗi text, khuyến nghị nén hoặc dùng ảnh dung lượng nhỏ (<600KB)
       if (file.size > 600 * 1024) return alert("Để đồng bộ đa thiết bị tốc độ cao, vui lòng chọn ảnh báo cáo gọn nhẹ dưới 600KB!");
-      
+
       const reader = new FileReader();
       reader.onloadend = async () => {
         try {
           await updateDoc(doc(db, "tasks", id), { img: reader.result, status: 'done' });
         } catch (err) {
-          alert("Lỗi đồng bộ ảnh lên Cloud: " + err.message);
+          alert("Lỗi đồng bộ ảnh: " + err.message);
         }
       };
       reader.readAsDataURL(file);
@@ -402,17 +421,17 @@ function EmployeeSection({ tasks, currentUser, selectedDate, isDayFinalized, onF
       await updateDoc(doc(db, "tasks", id), { title: editingTitleText });
       setEditingTaskId(null);
     } catch (err) {
-      alert("Lỗi sửa trên Cloud: " + err.message);
+      alert("Lỗi sửa công việc: " + err.message);
     }
   };
 
   const handleDeleteTask = async (id, title) => {
-    const isConfirmed = window.confirm(`Bạn có chắc muốn xóa việc: "${title}" trên Đám Mây?`);
+    const isConfirmed = window.confirm(`Bạn có chắc muốn xóa việc: "${title}"?`);
     if (isConfirmed) {
       try {
         await deleteDoc(doc(db, "tasks", id));
       } catch (err) {
-        alert("Lỗi xóa trên Cloud: " + err.message);
+        alert("Lỗi xóa công việc: " + err.message);
       }
     }
   };
@@ -423,7 +442,7 @@ function EmployeeSection({ tasks, currentUser, selectedDate, isDayFinalized, onF
     <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-sm space-y-4">
       <div className="flex justify-between border-b pb-2 dark:border-gray-700">
         <div>
-          <h3 className="font-bold text-sm sm:text-base">Todolist công việc cá nhân (Cloud)</h3>
+          <h3 className="font-bold text-sm sm:text-base">Todolist công việc cá nhân</h3>
           <p className="text-xs text-gray-400 font-medium">Vị trí: <span className="text-blue-500">{currentUser.position || 'Chưa thiết lập'}</span></p>
         </div>
         {isDayFinalized && <span className="px-2 py-0.5 bg-green-100 text-green-800 text-[10px] sm:text-xs font-bold rounded-full self-center">✓ Đã chốt ngày</span>}
@@ -431,7 +450,7 @@ function EmployeeSection({ tasks, currentUser, selectedDate, isDayFinalized, onF
 
       {!isDayFinalized ? (
         <form onSubmit={addTask} className="flex">
-          <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Thêm đầu việc mới lên Cloud..." className="flex-1 p-2 text-xs sm:text-sm border rounded-l dark:bg-gray-700 bg-transparent outline-none focus:ring-1 focus:ring-blue-500" />
+          <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Thêm đầu việc mới..." className="flex-1 p-2 text-xs sm:text-sm border rounded-l dark:bg-gray-700 bg-transparent outline-none focus:ring-1 focus:ring-blue-500" />
           <button type="submit" className="bg-blue-600 text-white px-3 sm:px-4 text-xs sm:text-sm rounded-r font-medium">Thêm</button>
         </form>
       ) : (
