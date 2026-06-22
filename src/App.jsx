@@ -110,7 +110,7 @@ export default function App() {
             </h2>
             <p className="text-[11px] text-center text-gray-400 mb-6 font-medium tracking-wider">HỆ THỐNG QUẢN LÝ CÔNG VIỆC</p>
             <div className="flex justify-center my-4">
-              <img src="/public/logo.svg" alt="Logo" className="h-16 w-auto" />
+              <img src="/logo.svg" alt="Logo" className="h-16 w-auto" />
             </div>
             <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-4">
               {authMode === 'register' && (
@@ -157,7 +157,7 @@ export default function App() {
           <nav className="flex flex-col sm:flex-row gap-3 justify-between items-center p-4 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-100 dark:border-gray-700">
             <div className="flex items-center justify-between w-full sm:w-auto">
               <div className="flex items-center space-x-2">
-                <img src="/public/favicon.png" className="w-8 h-8" alt="Logo" />
+                <img src="/favicon.png" className="w-8 h-8" alt="Logo" />
                 <span className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400">Omelytour Todolist</span>
                 <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-500 uppercase font-mono font-bold">{currentUser.role}</span>
               </div>
