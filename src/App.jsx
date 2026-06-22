@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 
 // =================================================================
-// CẤU HÌNH FIREBASE (HÃY THAY BẰNG CODES CỦA BẠN Ở BƯỚC 1)
+// CẤU HÌNH FIREBASE
 // =================================================================
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -25,9 +25,20 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Khởi tạo ứng dụng Firebase và kết nối cơ sở dữ liệu Firestore
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// Khởi tạo ứng dụng Firebase và kết nối cơ sở dữ liệu Firestore an toàn (Chống lỗi trắng màn hình)
+let app;
+let db;
+
+if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+  try {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+  } catch (error) {
+    console.error("Lỗi khởi tạo Firebase:", error);
+  }
+} else {
+  console.warn("⚠️ Cảnh báo: Thiếu biến môi trường Firebase trên Vercel! Hãy kiểm tra lại tab Environment Variables.");
+}
 
 export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -57,6 +68,9 @@ export default function App() {
 
   // 2. LẮNG NGHE DỮ LIỆU REALTIME TỪ FIREBASE CLOUD
   useEffect(() => {
+    // Nếu Firebase chưa cấu hình xong, bỏ qua để tránh sập ứng dụng gây trắng màn hình
+    if (!db) return;
+
     // Tự động đồng bộ bảng danh sách thành viên (users)
     const unsubscribeUsers = onSnapshot(collection(db, "users"), (snapshot) => {
       const usersList = [];
@@ -75,6 +89,8 @@ export default function App() {
         });
       }
       setUsers(usersList);
+    }, (error) => {
+      console.error("Lỗi đồng bộ dữ liệu Users từ Cloud:", error);
     });
 
     // Tự động đồng bộ bảng danh sách công việc (tasks)
@@ -82,6 +98,8 @@ export default function App() {
       const tasksList = [];
       snapshot.forEach(doc => tasksList.push({ id: doc.id, ...doc.data() }));
       setTasks(tasksList);
+    }, (error) => {
+      console.error("Lỗi đồng bộ dữ liệu Tasks từ Cloud:", error);
     });
 
     // Tự động đồng bộ tình trạng chốt báo cáo ngày (dailySubmissions)
@@ -91,6 +109,8 @@ export default function App() {
         submissionsMap[doc.id] = doc.data().isFinalized;
       });
       setDailySubmissions(submissionsMap);
+    }, (error) => {
+      console.error("Lỗi đồng bộ dữ liệu Submissions từ Cloud:", error);
     });
 
     return () => {
@@ -103,6 +123,7 @@ export default function App() {
   // Xử lý Đăng ký tài khoản mới
   const handleRegister = async (e) => {
     e.preventDefault();
+    if (!db) return alert("Hệ thống Cloud chưa được kết nối. Hãy kiểm tra cấu hình Vercel!");
     if (!email || !password || !name || !position) return alert('Vui lòng điền đủ thông tin, bao gồm cả vị trí làm việc');
     if (users.some(u => u.email === email)) return alert('Email này đã tồn tại');
 
@@ -147,6 +168,7 @@ export default function App() {
 
   // Thay đổi phân quyền thành viên
   const handleChangeRole = async (userId, newRole) => {
+    if (!db) return;
     try {
       await updateDoc(doc(db, "users", userId), { role: newRole });
     } catch (err) {
@@ -156,6 +178,7 @@ export default function App() {
 
   // Xóa tài khoản nhân sự
   const handleDeleteUser = async (userId) => {
+    if (!db) return;
     const userToDelete = users.find(u => u.id === userId);
     if (!userToDelete) return;
 
@@ -171,19 +194,16 @@ export default function App() {
   };
 
   const handleSaveProfile = async (updatedData) => {
+    if (!db) return;
     try {
-      // 1. Kiểm tra bảo vệ đề phòng currentUser chưa load xong
       if (!currentUser || !currentUser.email) {
         alert("Không tìm thấy thông tin email của người dùng!");
         return;
       }
 
       const cleanEmailId = currentUser.email.replace(/\./g, '_');
-
-      // 2. Thay updateDoc bằng setDoc và thêm { merge: true } ở cuối
       await setDoc(doc(db, "users", cleanEmailId), updatedData, { merge: true });
 
-      // 3. Cập nhật lại state dưới giao diện
       setCurrentUser({ ...currentUser, ...updatedData });
       alert('Cập nhật thông tin cá nhân thành công!');
       setIsProfileOpen(false);
@@ -195,16 +215,20 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300 font-sans">
       {screen === 'auth' && (
-        <div className="flex min-h-screen items-center justify-center mb-6">
-          <div className="w-full max-w-md bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700">
-            <h2 className="text-2xl font-bold text-center text-blue-600 dark:text-blue-400 mb-1">Omelytour Todolist</h2>
-            <p className="text-[11px] text-center text-gray-400 mb-6 font-medium tracking-wider">HỆ THỐNG TODOLIST</p>
+        <div className="flex min-h-screen items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 text-center">
+            <h2 className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">Omelytour Todolist</h2>
+            <p className="text-[11px] text-gray-400 mb-4 font-medium tracking-wider">HỆ THỐNG TODOLIST</p>
+            
+            {/* Đã sửa sang đường dẫn /logo.png chuẩn và căn giữa */}
             <img
-              src="/logo.svg"
+              src="/logo.png"
               alt="Logo Omely"
-              className="w-24 h-24 object-contain mb-2"
+              className="w-24 h-24 object-contain mx-auto mb-6"
+              onError={(e) => { e.target.style.display = 'none'; }} 
             />
-            <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-4">
+
+            <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-4 text-left">
               {authMode === 'register' && (
                 <>
                   <div>
@@ -244,10 +268,12 @@ export default function App() {
         <>
           <nav className="flex flex-col sm:flex-row gap-3 justify-between items-center p-4 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-100 dark:border-gray-700">
             <div className="flex items-center space-x-2">
+              {/* Đã sửa đường dẫn logo sang định dạng /logo.png */}
               <img
-                src="/logo.svg"
+                src="/logo.png"
                 alt="Logo Omely"
                 className="w-10 h-10 object-contain"
+                onError={(e) => { e.target.style.display = 'none'; }}
               />
               <span className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400">Omelytour Todolist</span>
               <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-500 uppercase font-mono font-bold">MÁY CHỦ</span>
@@ -255,7 +281,7 @@ export default function App() {
             <div className="flex items-center space-x-4 border-t sm:border-t-0 pt-2 sm:pt-0 w-full sm:w-auto justify-end">
               <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full text-xs">{isDarkMode ? '🌞' : '🌙'}</button>
               <div className="flex items-center space-x-3">
-                <img src={currentUser.avatar} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-blue-500/30" />
+                <img src={currentUser.avatar || 'https://ui-avatars.com/api/?name=User'} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-blue-500/30" />
                 <div className="text-left">
                   <p className="text-xs sm:text-sm font-semibold truncate max-w-[100px]">{currentUser.name}</p>
                   <p className="text-[10px] text-blue-500 dark:text-blue-400 block font-medium truncate max-w-[100px]">{currentUser.position || 'Chưa cập nhật'}</p>
@@ -282,6 +308,7 @@ export default function App() {
                 selectedDate={selectedDate}
                 isDayFinalized={!!dailySubmissions[`${currentUser.email.replace(/\./g, '_')}_${selectedDate}`]}
                 onFinalize={async () => {
+                  if (!db) return;
                   const submissionId = `${currentUser.email.replace(/\./g, '_')}_${selectedDate}`;
                   await setDoc(doc(db, "dailySubmissions", submissionId), { isFinalized: true });
                 }}
@@ -333,7 +360,7 @@ function ProfileModal({ currentUser, onSave, onClose }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="flex flex-col items-center space-y-2">
             <div className="relative group w-16 h-16 sm:w-20 sm:h-20">
-              <img src={avatar} alt="Avatar" className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-blue-500 shadow-md" />
+              <img src={avatar || 'https://ui-avatars.com/api/?name=User'} alt="Avatar" className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-blue-500 shadow-md" />
               <label className="absolute inset-0 bg-black/50 rounded-full text-[9px] text-white flex items-center justify-center cursor-pointer">
                 Đổi ảnh <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
               </label>
@@ -369,9 +396,9 @@ function EmployeeSection({ tasks, currentUser, selectedDate, isDayFinalized, onF
 
   const addTask = async (e) => {
     e.preventDefault();
+    if (!db) return;
     if (!input.trim()) return;
     try {
-      // Đẩy task mới lên thẳng Cloud Firestore
       await addDoc(collection(db, "tasks"), {
         userEmail: currentUser.email,
         userName: currentUser.name,
@@ -387,10 +414,11 @@ function EmployeeSection({ tasks, currentUser, selectedDate, isDayFinalized, onF
   };
 
   const updateStatus = async (id, status) => {
+    if (!db) return;
     try {
       await updateDoc(doc(db, "tasks", id), {
         status,
-        img: status === 'done' ? null : null // Giữ nguyên hoặc clear ảnh nếu chuyển trạng thái
+        img: status === 'done' ? null : null
       });
     } catch (err) {
       alert("Lỗi cập nhật trạng thái: " + err.message);
@@ -398,9 +426,9 @@ function EmployeeSection({ tasks, currentUser, selectedDate, isDayFinalized, onF
   };
 
   const handleFileChange = (id, e) => {
+    if (!db) return;
     const file = e.target.files[0];
     if (file) {
-      // Do Firestore giới hạn dữ liệu chuỗi text, khuyến nghị nén hoặc dùng ảnh dung lượng nhỏ (<600KB)
       if (file.size > 600 * 1024) return alert("Để đồng bộ đa thiết bị tốc độ cao, vui lòng chọn ảnh báo cáo gọn nhẹ dưới 600KB!");
 
       const reader = new FileReader();
@@ -416,6 +444,7 @@ function EmployeeSection({ tasks, currentUser, selectedDate, isDayFinalized, onF
   };
 
   const saveEditingTask = async (id) => {
+    if (!db) return;
     if (!editingTitleText.trim()) return alert("Vui lòng không bỏ trống tên công việc!");
     try {
       await updateDoc(doc(db, "tasks", id), { title: editingTitleText });
@@ -426,6 +455,7 @@ function EmployeeSection({ tasks, currentUser, selectedDate, isDayFinalized, onF
   };
 
   const handleDeleteTask = async (id, title) => {
+    if (!db) return;
     const isConfirmed = window.confirm(`Bạn có chắc muốn xóa việc: "${title}"?`);
     if (isConfirmed) {
       try {
@@ -592,14 +622,14 @@ function AdminUserManagement({ users, currentUser, onChangeRole, onDeleteUser })
             {users.map(u => (
               <tr key={u.id} className="hover:bg-gray-50/50">
                 <td className="p-2 flex items-center space-x-2">
-                  <img src={u.avatar} className="w-7 h-7 rounded-full object-cover flex-shrink-0" alt="avatar" />
+                  <img src={u.avatar || 'https://ui-avatars.com/api/?name=User'} className="w-7 h-7 rounded-full object-cover flex-shrink-0" alt="avatar" />
                   <span className="font-medium whitespace-nowrap">{u.name}</span>
                 </td>
                 <td className="p-2 text-blue-600 font-medium whitespace-nowrap">{u.position || 'Chưa thiết lập'}</td>
                 <td className="p-2 text-gray-500 font-mono text-[11px]">{u.email}</td>
                 <td className="p-2">
                   <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-700'}`}>
-                    {u.role.toUpperCase()}
+                    {u.role ? u.role.toUpperCase() : 'EMPLOYEE'}
                   </span>
                 </td>
                 <td className="p-2 text-right">
@@ -607,7 +637,7 @@ function AdminUserManagement({ users, currentUser, onChangeRole, onDeleteUser })
                     <span className="text-[11px] text-gray-400 italic whitespace-nowrap">Chính bạn</span>
                   ) : (
                     <div className="flex items-center justify-end space-x-2">
-                      <select value={u.role} onChange={(e) => onChangeRole(u.id, e.target.value)} className="p-1 text-[11px] border rounded outline-none dark:bg-gray-700 bg-transparent">
+                      <select value={u.role || 'employee'} onChange={(e) => onChangeRole(u.id, e.target.value)} className="p-1 text-[11px] border rounded outline-none dark:bg-gray-700 bg-transparent">
                         <option value="employee">Employee</option>
                         <option value="admin">Admin</option>
                       </select>
